@@ -1,0 +1,19 @@
+{
+  "name": "pvp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "node-sass": "node-sass index.scss index.css"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devzx/pvp.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/devzx/pvp/issues"
+  },
+  "homepage": "https://github.com/devzx/pvp#readme"
+}
