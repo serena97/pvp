@@ -1,11 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/FuzzyStatic/blizzard/v2"
+	"github.com/FuzzyStatic/blizzard/v2/wowp"
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -18,8 +21,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//eu := blizzard.NewClient(cfg.ClientID, cfg.ClientSecret, blizzard.EU, blizzard.EnUS)
-	//us := blizzard.NewClient(cfg.ClientID, cfg.ClientSecret, blizzard.US, blizzard.EnUS)
+	eu := blizzard.NewClient(cfg.ClientID, cfg.ClientSecret, blizzard.EU, blizzard.EnUS)
+	us := blizzard.NewClient(cfg.ClientID, cfg.ClientSecret, blizzard.US, blizzard.EnUS)
+
+	clients := &clients{
+		eu: eu,
+		us: us,
+	}
 
 	// CharacterRender
 	//m, _, err := eu.WoWCharacterMediaSummary("silvermoon", "devz")
@@ -51,32 +59,71 @@ func main() {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/{region}/{realm}/{name}", func(r chi.Router) {
-			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-				region, realm, name := chi.URLParam(r, "region"), chi.URLParam(r, "realm"), chi.URLParam(r, "name")
-				fmt.Fprint(w, region, realm, name)
-			})
-
+			r.Use(AllowedRegion)
+			r.Use(ClientCtx(clients))
+			r.Get("/", GetCharacter)
 		})
 	})
 	http.ListenAndServe(":8080", r)
 
 }
 
-type CharacterRequest struct {
+// AllowedRegion ensures the region being requested is supported
+func AllowedRegion(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch chi.URLParam(r, "region") {
+		case blizzard.EU.String(), blizzard.US.String():
+			next.ServeHTTP(w, r)
+		default:
+			render.Render(w, r, ErrNotFound)
+			return
+		}
+	})
 }
 
-type ErrResponse struct {
-	Err            error `json:"-"` // low-level runtime error
-	HTTPStatusCode int   `json:"-"` // http response status code
-
-	StatusText string `json:"status"`          // user-level status message
-	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
-	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
+func ClientCtx(server *clients) func(next http.Handler) http.Handler {
+	var client *blizzard.Client
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch chi.URLParam(r, "region") {
+			case blizzard.EU.String():
+				client = server.eu
+			case blizzard.US.String():
+				client = server.us
+			}
+			ctx := context.WithValue(r.Context(), "client", client)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
-func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	render.Status(r, e.HTTPStatusCode)
+type clients struct {
+	eu *blizzard.Client
+	us *blizzard.Client
+}
+
+func GetCharacter(w http.ResponseWriter, r *http.Request) {
+	c := r.Context().Value("client").(*blizzard.Client)
+	name, realm := chi.URLParam(r, "name"), chi.URLParam(r, "realm")
+	s, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket3v3)
+	if err != nil {
+		render.Render(w, r, ErrNotFound)
+		return
+	}
+
+	b, err := json.Marshal(&s)
+	if err != nil {
+		render.Render(w, r, ErrNotFound)
+	}
+	w.Write(b)
+}
+
+type CharacterResponse struct {
+	Name  string `json:"name"`
+	Realm string `json:"realm"`
+	Guild string `json:"guild"`
+}
+
+func (cr *CharacterResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
-
-var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."}
