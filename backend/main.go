@@ -21,7 +21,9 @@ func main() {
 		log.Fatal(err)
 	}
 
+	log.Println("initialising eu client")
 	eu := blizzard.NewClient(cfg.ClientID, cfg.ClientSecret, blizzard.EU, blizzard.EnUS)
+	log.Println("initialising us client")
 	us := blizzard.NewClient(cfg.ClientID, cfg.ClientSecret, blizzard.US, blizzard.EnUS)
 
 	clients := &clients{
@@ -47,6 +49,7 @@ func main() {
 	//fmt.Printf("%+v\n", b)
 	//eu.WoWPvPTalent()
 
+	log.Println("initialising router")
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP)
@@ -56,7 +59,7 @@ func main() {
 	r.Use(middleware.URLFormat)
 	r.Use(middleware.Timeout(5 * time.Second))
 	r.Use(render.SetContentType(render.ContentTypeJSON))
-
+	log.Println("initialising routes")
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/{region}/{realm}/{name}", func(r chi.Router) {
 			r.Use(AllowedRegion)
@@ -64,6 +67,7 @@ func main() {
 			r.Get("/", GetCharacter)
 		})
 	})
+	log.Println("listening")
 	http.ListenAndServe(":8080", r)
 
 }
@@ -81,15 +85,15 @@ func AllowedRegion(next http.Handler) http.Handler {
 	})
 }
 
-func ClientCtx(server *clients) func(next http.Handler) http.Handler {
+func ClientCtx(c *clients) func(next http.Handler) http.Handler {
 	var client *blizzard.Client
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch chi.URLParam(r, "region") {
 			case blizzard.EU.String():
-				client = server.eu
+				client = c.eu
 			case blizzard.US.String():
-				client = server.us
+				client = c.us
 			}
 			ctx := context.WithValue(r.Context(), "client", client)
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -107,13 +111,13 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 	name, realm := chi.URLParam(r, "name"), chi.URLParam(r, "realm")
 	s, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket3v3)
 	if err != nil {
-		render.Render(w, r, ErrNotFound)
+		render.Render(w, r, ServerError(err))
 		return
 	}
-
 	b, err := json.Marshal(&s)
 	if err != nil {
 		render.Render(w, r, ErrNotFound)
+		return
 	}
 	w.Write(b)
 }
