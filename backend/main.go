@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/FuzzyStatic/blizzard/v2"
-	"github.com/FuzzyStatic/blizzard/v2/wowp"
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -38,17 +37,6 @@ func main() {
 	//}
 	//fmt.Printf("%+v\n", m)
 
-	//c, _, err := eu.WoWCharacterPvPSummary(context.Background(), "silvermoon", "devz")
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//b, _, err := eu.WoWCharacterPvPBracketStatistics(context.Background(), "silvermoon", "devz", wowp.Bracket2v2)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//fmt.Printf("%+v\n", b)
-	//eu.WoWPvPTalent()
-
 	log.Println("initialising router")
 	r := chi.NewRouter()
 
@@ -67,7 +55,7 @@ func main() {
 			r.Get("/", GetCharacter)
 		})
 	})
-	log.Println("listening")
+	log.Println("starting webserver")
 	http.ListenAndServe(":8080", r)
 
 }
@@ -109,25 +97,76 @@ type clients struct {
 func GetCharacter(w http.ResponseWriter, r *http.Request) {
 	c := r.Context().Value("client").(*blizzard.Client)
 	name, realm := chi.URLParam(r, "name"), chi.URLParam(r, "realm")
-	s, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket3v3)
+
+	// Check if Character being requested is valid
+	log.Printf("profile status check, name: %s realm: %s region: %s", name, realm, chi.URLParam(r, "region"))
+	status, _, err := c.WoWCharacterProfileStatus(r.Context(), realm, name)
+	if err != nil || status.IsValid != true {
+		render.Render(w, r, ErrNotFound)
+		return
+	}
+	summary, b, err := c.WoWCharacterProfileSummary(r.Context(), realm, name)
+	if err != nil {
+		render.Render(w, r, ErrNotFound)
+	}
+	j := struct {
+		CovenantProgress struct {
+			ChosenCovenant struct {
+				Name string `json:"name"`
+			} `json:"chosen_covenant"`
+			RenownLevel int `json:"renown_level"`
+		} `json:"covenant_progress"`
+	}{}
+
+	if err := json.Unmarshal(b, &j); err != nil {
+		render.Render(w, r, ServerError(err))
+		return
+	}
+
+	character := &Character{
+		ID:          summary.ID,
+		Name:        summary.Name,
+		Realm:       summary.Realm.Name,
+		Faction:     summary.Faction.Name,
+		Race:        summary.Race.Name,
+		Gender:      summary.Gender.Name,
+		Guild:       summary.Guild.Name,
+		Spec:        summary.ActiveSpec.Name,
+		ItemLevel:   summary.AverageItemLevel,
+		Covenant:    j.CovenantProgress.ChosenCovenant.Name,
+		RenownLevel: j.CovenantProgress.RenownLevel,
+	}
+
+	b, err = json.Marshal(character)
 	if err != nil {
 		render.Render(w, r, ServerError(err))
 		return
 	}
-	b, err := json.Marshal(&s)
-	if err != nil {
-		render.Render(w, r, ErrNotFound)
-		return
-	}
-	w.Write(b)
+	render.Render(w, r, NewCharacterResponse(character))
 }
 
 type CharacterResponse struct {
-	Name  string `json:"name"`
-	Realm string `json:"realm"`
-	Guild string `json:"guild"`
+	*Character
 }
 
 func (cr *CharacterResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
+}
+
+func NewCharacterResponse(character *Character) *CharacterResponse {
+	return &CharacterResponse{Character: character}
+}
+
+type Character struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Realm       string `json:"realm"`
+	Faction     string `json:"faction"`
+	Race        string `json:"race"`
+	Gender      string `json:"gender"`
+	Guild       string `json:"guild,omitempty"`
+	Spec        string `json:"spec"`
+	ItemLevel   int    `json:"item_level"`
+	Covenant    string `json:"covenant"`
+	RenownLevel int    `json:"renown_level"`
 }
