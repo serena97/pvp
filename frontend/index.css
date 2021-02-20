@@ -1,6 +1,77 @@
-html {
+.background {
   background-image: url("assets/background.jpg");
   background-size: cover;
   background-repeat: no-repeat;
-  height: 1000px;
-}
+  height: 1000px; }
+
+.content {
+  margin: auto;
+  width: 60%;
+  padding-top: 150px; }
+
+.searchbar .prompt {
+  border-radius: 500rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  padding-left: 1rem;
+  border: 2px solid #dcd2d2;
+  background-color: #ffffff40;
+  width: 100%;
+  color: white; }
+  .searchbar .prompt:focus {
+    outline: none; }
+
+.searchbar .search-icon {
+  position: absolute;
+  line-height: 1;
+  text-align: center;
+  top: 159px;
+  right: 20%;
+  font-size: 24px;
+  color: white; }
+
+.card {
+  background-color: #00000087;
+  margin-top: 60px;
+  border-radius: 0.5rem;
+  color: white;
+  padding: 40px; }
+  .card #avatar {
+    display: inline-block; }
+    .card #avatar img {
+      height: 100px;
+      width: 100px; }
+  .card .character-info {
+    display: inline-block;
+    margin-left: 15px;
+    line-height: 40px; }
+    .card .character-info #name {
+      font-size: 48px; }
+      .card .character-info #name img {
+        height: 60px; }
+  .card table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%; }
+  .card td, .card th {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px; }
+
+body {
+  margin: 0;
+  font-family: Helvetica; }
+
+::placeholder {
+  /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: white;
+  opacity: 1;
+  /* Firefox */ }
+
+:-ms-input-placeholder {
+  /* Internet Explorer 10-11 */
+  color: white; }
+
+::-ms-input-placeholder {
+  /* Microsoft Edge */
+  color: white; }

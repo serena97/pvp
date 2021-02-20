@@ -1,6 +1,104 @@
-html {
+$text-color: white;
+
+.background {
   background-image: url("assets/background.jpg");
   background-size: cover;
   background-repeat: no-repeat;
   height: 1000px;
+}
+
+.content {
+  margin: auto;
+  width: 60%;
+  padding-top: 150px;
+}
+
+.searchbar {
+  & .prompt {
+    border-radius: 500rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    padding-left: 1rem;
+    border: 2px solid #dcd2d2;
+    background-color: #ffffff40;
+    width: 100%;
+    color: $text-color;
+
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  & .search-icon {
+    position: absolute;
+    line-height: 1;
+    text-align: center;
+    top: 159px;
+    right: 20%;
+    font-size: 24px;
+    color: $text-color;
+  }
+}
+
+.card {
+  background-color: #00000087;
+  margin-top: 60px;
+  border-radius: 0.5rem;
+  color: $text-color;
+  padding: 40px;
+
+  & #avatar {
+    display: inline-block;
+
+    img {
+      height: 100px;
+      width: 100px;
+    }
+  }
+
+  .character-info {
+    display: inline-block;
+    margin-left: 15px;
+    line-height: 40px;
+
+    & #name {
+      font-size: 48px;
+
+      img {
+        height: 60px;
+      }
+    }
+  }
+
+  table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+  }
+  
+  td, th {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+  }
+  
+}
+
+body {
+  margin: 0;
+  font-family: Helvetica;
+}
+
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: $text-color;
+  opacity: 1; /* Firefox */
+}
+
+:-ms-input-placeholder { /* Internet Explorer 10-11 */
+  color: $text-color;
+}
+
+::-ms-input-placeholder { /* Microsoft Edge */
+  color: $text-color;
 }
