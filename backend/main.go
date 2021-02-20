@@ -99,17 +99,19 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 	name, realm := chi.URLParam(r, "name"), chi.URLParam(r, "realm")
 
 	// Check if Character being requested is valid
-	log.Printf("profile status check, name: %s realm: %s region: %s", name, realm, chi.URLParam(r, "region"))
 	status, _, err := c.WoWCharacterProfileStatus(r.Context(), realm, name)
 	if err != nil || status.IsValid != true {
 		render.Render(w, r, ErrNotFound)
 		return
 	}
+	// Retrieve a summary which allows us to populate most of the generic fields
 	summary, b, err := c.WoWCharacterProfileSummary(r.Context(), realm, name)
 	if err != nil {
 		render.Render(w, r, ErrNotFound)
 	}
-	j := struct {
+	// ToDo: Currently the blizzard api client we are using is not up to date with
+	// the latest shadowlands payloads so we need to unmarshal covenant data ourselves
+	covenant := struct {
 		CovenantProgress struct {
 			ChosenCovenant struct {
 				Name string `json:"name"`
@@ -118,7 +120,7 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 		} `json:"covenant_progress"`
 	}{}
 
-	if err := json.Unmarshal(b, &j); err != nil {
+	if err := json.Unmarshal(b, &covenant); err != nil {
 		render.Render(w, r, ServerError(err))
 		return
 	}
@@ -128,21 +130,20 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 		Name:        summary.Name,
 		Realm:       summary.Realm.Name,
 		Faction:     summary.Faction.Name,
+		Class:       summary.CharacterClass.Name,
 		Race:        summary.Race.Name,
 		Gender:      summary.Gender.Name,
+		Level:       summary.Level,
 		Guild:       summary.Guild.Name,
 		Spec:        summary.ActiveSpec.Name,
 		ItemLevel:   summary.AverageItemLevel,
-		Covenant:    j.CovenantProgress.ChosenCovenant.Name,
-		RenownLevel: j.CovenantProgress.RenownLevel,
+		Covenant:    covenant.CovenantProgress.ChosenCovenant.Name,
+		RenownLevel: covenant.CovenantProgress.RenownLevel,
 	}
 
-	b, err = json.Marshal(character)
-	if err != nil {
+	if err := render.Render(w, r, NewCharacterResponse(character)); err != nil {
 		render.Render(w, r, ServerError(err))
-		return
 	}
-	render.Render(w, r, NewCharacterResponse(character))
 }
 
 type CharacterResponse struct {
@@ -162,8 +163,10 @@ type Character struct {
 	Name        string `json:"name"`
 	Realm       string `json:"realm"`
 	Faction     string `json:"faction"`
+	Class       string `json:"class"`
 	Race        string `json:"race"`
 	Gender      string `json:"gender"`
+	Level       int    `json:"level"`
 	Guild       string `json:"guild,omitempty"`
 	Spec        string `json:"spec"`
 	ItemLevel   int    `json:"item_level"`
