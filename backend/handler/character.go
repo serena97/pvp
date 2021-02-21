@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"pvp/models"
 
 	"github.com/FuzzyStatic/blizzard/v2"
+	"github.com/FuzzyStatic/blizzard/v2/wowp"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 )
@@ -77,6 +79,51 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 			Avatar: avatar,
 			Main:   main,
 		},
+	}
+	stats, _, err := c.WoWCharacterAchievementsStatistics(context.Background(), realm, name)
+	if err != nil {
+		render.Render(w, r, ServerError(err))
+		return
+	}
+	for _, catagory := range stats.Categories {
+		if catagory.Name == "Player vs. Player" {
+			for _, subCatagory := range catagory.SubCategories {
+				if subCatagory.Name == "Rated Arenas" {
+					for _, statistic := range subCatagory.Statistics {
+						switch statistic.ID {
+						case models.Highest2v2PersonalRating:
+							character.PvPStatistics.TwoVTwo.HighestRating = statistic.Quantity
+						case models.Highest3v3PersonalRating:
+							character.PvPStatistics.ThreeVThree.HighestRating = statistic.Quantity
+						}
+					}
+				}
+			}
+		}
+	}
+
+	twos, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket2v2)
+	if err != nil {
+		render.Render(w, r, ServerError(err))
+		return
+	}
+	character.PvPStatistics.TwoVTwo.CurrentRating = float64(twos.Rating)
+
+	threes, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket3v3)
+	if err != nil {
+		render.Render(w, r, ServerError(err))
+		return
+	}
+	character.PvPStatistics.ThreeVThree.CurrentRating = float64(threes.Rating)
+
+	rbg, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.BracketRBG)
+	if err != nil && err.Error() == "404 Not Found" {
+		character.PvPStatistics.RBG.CurrentRating = 0
+	} else if err != nil {
+		render.Render(w, r, ServerError(err))
+		return
+	} else {
+		character.PvPStatistics.RBG.CurrentRating = float64(rbg.Rating)
 	}
 
 	if err := render.Render(w, r, NewCharacterResponse(character)); err != nil {
