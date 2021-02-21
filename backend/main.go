@@ -15,19 +15,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("initialising eu client")
 	eu := blizzard.NewClient(cfg.ClientID, cfg.ClientSecret, blizzard.EU, blizzard.EnUS)
-	log.Println("initialising us client")
 	us := blizzard.NewClient(cfg.ClientID, cfg.ClientSecret, blizzard.US, blizzard.EnUS)
-
-	clients := &handler.Clients{
-		EU: eu,
-		US: us,
-	}
+	clients := handler.NewClients(eu, us)
 
 	r := handler.NewHandler(clients)
 
-	log.Println("initialising router")
 	log.Println("starting webserver")
 	http.ListenAndServe(":8080", r)
 }

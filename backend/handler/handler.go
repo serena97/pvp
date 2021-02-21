@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"time"
 
@@ -13,12 +12,19 @@ import (
 	"github.com/go-chi/render"
 )
 
-type Clients struct {
-	EU *blizzard.Client
-	US *blizzard.Client
+type clients struct {
+	eu *blizzard.Client
+	us *blizzard.Client
 }
 
-func NewHandler(c *Clients) http.Handler {
+func NewClients(eu, us *blizzard.Client) *clients {
+	return &clients{
+		eu: eu,
+		us: us,
+	}
+}
+
+func NewHandler(c *clients) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(cors.Handler(cors.Options{
@@ -32,7 +38,7 @@ func NewHandler(c *Clients) http.Handler {
 	r.Use(middleware.URLFormat)
 	r.Use(middleware.Timeout(5 * time.Second))
 	r.Use(render.SetContentType(render.ContentTypeJSON))
-	log.Println("initialising routes")
+
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/{region}/{realm}/{name}", func(r chi.Router) {
 			r.Use(AllowedRegion)
@@ -57,15 +63,15 @@ func AllowedRegion(next http.Handler) http.Handler {
 	})
 }
 
-func ClientCtx(c *Clients) func(next http.Handler) http.Handler {
+func ClientCtx(c *clients) func(next http.Handler) http.Handler {
 	var client *blizzard.Client
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch chi.URLParam(r, "region") {
 			case blizzard.EU.String():
-				client = c.EU
+				client = c.eu
 			case blizzard.US.String():
-				client = c.US
+				client = c.us
 			}
 			ctx := context.WithValue(r.Context(), "client", client)
 			next.ServeHTTP(w, r.WithContext(ctx))
