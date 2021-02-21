@@ -16,6 +16,25 @@ interface User {
         avatar: string;
         main: string;
     }
+    pvp_statistcs: PVPStatics
+}
+
+interface PVPStatics {
+    "2v2": {
+        highest_rating: number;
+        current_rating: number;
+        season_highest_rating: number;
+    }
+    "3v3": {
+        highest_rating: number;
+        current_rating: number;
+        season_highest_rating: number;
+    }
+    "rbg": {
+        highest_rating: number;
+        current_rating: number;
+        season_highest_rating: number;
+    }
 }
 
 const classColors = new Map([
@@ -34,7 +53,7 @@ const classColors = new Map([
 ])
 
 async function getUser() {
-    const response = await fetch('https://cc00df208b9c.ngrok.io/api/v1/eu/stormscale/devzx');
+    const response = await fetch('http://localhost:8080/api/v1/eu/stormscale/devzx');
 
     if(!response.ok) {
         console.error('error');
@@ -65,6 +84,39 @@ async function getUser() {
     const guild = user.guild ? `<${user.guild}>` : ''
     characterTitle.textContent = `${user.level} ${user.race} ${user.spec} ${user.class} ${guild} ${user.realm}`
 
+    getPvpStatistics(user.pvp_statistcs);
+
+    const cards = document.getElementsByClassName('card')
+    for(const card of cards) {
+        (card as HTMLElement).style.visibility = 'visible' 
+    }
+}
+
+function getPvpStatistics(pvpstats: PVPStatics) {
+    const table = document.querySelector("table");
+    const thead = table.createTHead();
+    const cols = ['', 'Current Rating', 'Season High', 'Highest Rating']
+    const headerRow = thead.insertRow();
+    cols.forEach(col => {
+        const th = document.createElement('th');
+        const text = document.createTextNode(col);
+        th.appendChild(text);
+        headerRow.appendChild(th);
+    })
+
+    Object.entries(pvpstats).forEach(([key, value]) => {
+        const row = table.insertRow();
+        insertCell(row, key);
+        insertCell(row, value.current_rating);
+        insertCell(row, value.season_highest_rating);
+        insertCell(row, value.highest_rating);
+    })
+}
+
+function insertCell(row: HTMLTableRowElement, stat: any) {
+    const cell = row.insertCell();
+    const text = document.createTextNode(stat);
+    cell.appendChild(text)
 }
 
 getUser();
