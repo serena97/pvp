@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"pvp/models"
 
@@ -30,17 +31,25 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 
 	// Check if Character being requested is valid
 	status, _, err := c.WoWCharacterProfileStatus(r.Context(), realm, name)
-	if err != nil || status.IsValid != true {
+	if (err != nil && err.Error() == "404 Not Found") || !status.IsValid {
+		log.Println(err)
 		render.Render(w, r, ErrNotFound)
+		return
+	} else if err != nil {
+		log.Println(err)
+		render.Render(w, r, ServerError(err))
 		return
 	}
 	// Retrieve a summary which allows us to populate most of the generic fields
 	summary, b, err := c.WoWCharacterProfileSummary(r.Context(), realm, name)
 	if err != nil {
+		log.Println(err)
 		render.Render(w, r, ServerError(err))
+		return
 	}
 	cov := &models.Covenent{}
 	if err := json.Unmarshal(b, cov); err != nil {
+		log.Println(err)
 		render.Render(w, r, ServerError(err))
 		return
 	}
@@ -48,7 +57,9 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 	// Retrieve character media
 	media, _, err := c.WoWCharacterMediaSummary(r.Context(), realm, name)
 	if err != nil {
+		log.Println(err)
 		render.Render(w, r, ServerError(err))
+		return
 	}
 
 	var avatar, main string
@@ -82,6 +93,7 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 	stats, _, err := c.WoWCharacterAchievementsStatistics(context.Background(), realm, name)
 	if err != nil {
+		log.Println(err)
 		render.Render(w, r, ServerError(err))
 		return
 	}
@@ -103,18 +115,26 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	twos, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket2v2)
-	if err != nil {
+	if err != nil && err.Error() == "404 Not Found" {
+		character.PvPStatistics.TwoVTwo.CurrentRating = 0
+	} else if err != nil {
+		log.Println(err)
 		render.Render(w, r, ServerError(err))
-		return
+	} else {
+		character.PvPStatistics.TwoVTwo.CurrentRating = float64(twos.Rating)
 	}
-	character.PvPStatistics.TwoVTwo.CurrentRating = float64(twos.Rating)
 
 	threes, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket3v3)
-	if err != nil {
+	if err != nil && err.Error() == "404 Not Found" {
+		character.PvPStatistics.ThreeVThree.CurrentRating = 0
+
+	} else if err != nil {
+		log.Println(err)
 		render.Render(w, r, ServerError(err))
 		return
+	} else {
+		character.PvPStatistics.ThreeVThree.CurrentRating = float64(threes.Rating)
 	}
-	character.PvPStatistics.ThreeVThree.CurrentRating = float64(threes.Rating)
 
 	rbg, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.BracketRBG)
 	if err != nil && err.Error() == "404 Not Found" {
@@ -127,6 +147,7 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := render.Render(w, r, NewCharacterResponse(character)); err != nil {
+		log.Println(err)
 		render.Render(w, r, ServerError(err))
 	}
 }
