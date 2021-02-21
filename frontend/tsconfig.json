@@ -1,9 +1,9 @@
 {
-    "include": ["index.ts"],
+    "include": ["src/user.ts", "src/main.ts"],
     "compilerOptions": {
-      "module": "commonjs",
+      "module": "es2017",
       "target": "es2017",
       "sourceMap": true,
-      "preserveConstEnums": true
+      "preserveConstEnums": true,
     }
 }

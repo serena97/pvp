@@ -4,16 +4,16 @@
     <title>PVP</title>
     <link rel="stylesheet" href="index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"></head>
-    <script src="index.js"></script>
 <body>
     <div class="background">
         <div class="content">
             <div class="searchbar">
-                <input class="prompt" type="text" placeholder="Search a profile...">
+                <input class="prompt" id="input" type="text" placeholder="Search a profile...">
                 <i class="fa fa-search search-icon"></i>
             </div>
             <div class="card">
-                <div id="avatar"></div>
+                <div id="avatar">
+                </div>
                 <div class="character-info">
                     <div id="name"></div>
                     <div id="item-lvl"></div>
@@ -27,4 +27,5 @@
         </div>
     </div>
 </body>
+<script src="dist/bundle.js"></script>
 </html>

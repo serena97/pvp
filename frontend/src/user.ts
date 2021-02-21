@@ -52,8 +52,8 @@ const classColors = new Map([
     ['Warrior', '#C69B6D'],
 ])
 
-async function getUser() {
-    const response = await fetch('http://localhost:8080/api/v1/eu/stormscale/devzx');
+export async function getUser(profileName: string) {
+    const response = await fetch(`http://localhost:8080/api/v1/eu/silvermoon/${profileName}`);
 
     if(!response.ok) {
         console.error('error');
@@ -66,6 +66,8 @@ async function getUser() {
     background.style['background-image'] = `url(${user.media.main})`
 
     const name = document.getElementById('name');
+    removeChildren(name);
+
     name.textContent = user.name;
     name.style.color = color;
     const logo = document.createElement('img');
@@ -73,6 +75,7 @@ async function getUser() {
     name.appendChild(logo)
 
     const avatar = document.getElementById('avatar');
+    removeChildren(avatar);
     const img = document.createElement('img');
     img.src = user.media.avatar;
     avatar.appendChild(img);
@@ -86,14 +89,21 @@ async function getUser() {
 
     getPvpStatistics(user.pvp_statistcs);
 
-    const cards = document.getElementsByClassName('card')
+    const cards = document.getElementsByClassName('card');
     for(const card of cards) {
         (card as HTMLElement).style.visibility = 'visible' 
     }
 }
 
+function removeChildren(node: HTMLElement) {
+    while (node.firstChild) {
+        node.removeChild(node.lastChild);
+    }
+}
+
 function getPvpStatistics(pvpstats: PVPStatics) {
     const table = document.querySelector("table");
+    removeChildren(table);
     const thead = table.createTHead();
     const cols = ['', 'Current Rating', 'Season High', 'Highest Rating']
     const headerRow = thead.insertRow();
@@ -118,5 +128,3 @@ function insertCell(row: HTMLTableRowElement, stat: any) {
     const text = document.createTextNode(stat);
     cell.appendChild(text)
 }
-
-getUser();
