@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
+	"pvp/db"
 	"pvp/handler"
 
 	"github.com/FuzzyStatic/blizzard/v2"
@@ -15,12 +17,18 @@ func main() {
 		log.Fatal(err)
 	}
 
+	db, err := db.NewDatabase(cfg.MongoHost, cfg.MongoPort, cfg.MongoDatabase)
+	if err != nil {
+		log.Fatal(err)
+	}
 	eu := blizzard.NewClient(cfg.ClientID, cfg.ClientSecret, blizzard.EU, blizzard.EnUS)
 	us := blizzard.NewClient(cfg.ClientID, cfg.ClientSecret, blizzard.US, blizzard.EnUS)
-	clients := handler.NewClients(eu, us)
-
-	r := handler.NewHandler(clients)
-
+	c := map[string]*blizzard.Client{
+		"eu": eu,
+		"us": us,
+	}
+	s := handler.NewServer(db, c)
+	s.NewHandler()
 	log.Println("starting webserver")
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(net.JoinHostPort(cfg.Host, cfg.Port), s.Serve())
 }

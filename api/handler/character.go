@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"pvp/models"
+	"strings"
 
 	"github.com/FuzzyStatic/blizzard/v2"
 	"github.com/FuzzyStatic/blizzard/v2/wowp"
@@ -18,6 +19,11 @@ type CharacterResponse struct {
 }
 
 func (cr *CharacterResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	// Upper case fields before rendering the response
+	if cr.Character != nil {
+		cr.Character.Name = strings.Title(cr.Character.Name)
+		cr.Character.Realm = strings.Title(cr.Character.Realm)
+	}
 	return nil
 }
 
@@ -25,12 +31,18 @@ func NewCharacterResponse(character *models.Character) *CharacterResponse {
 	return &CharacterResponse{Character: character}
 }
 
-func GetCharacter(w http.ResponseWriter, r *http.Request) {
-	c := r.Context().Value("client").(*blizzard.Client)
+func (s *server) GetCharacter(w http.ResponseWriter, r *http.Request) {
+	c := r.Context().Value(contextKey("character")).(*models.Character)
+	if c != nil {
+		render.Render(w, r, NewCharacterResponse(c))
+		return
+	}
+
+	bClient := r.Context().Value(contextKey("client")).(*blizzard.Client)
 	name, realm := chi.URLParam(r, "name"), chi.URLParam(r, "realm")
 
-	// Check if Character being requested is valid
-	status, _, err := c.WoWCharacterProfileStatus(r.Context(), realm, name)
+	// Check if character being requested is valid
+	status, _, err := bClient.WoWCharacterProfileStatus(r.Context(), realm, name)
 	if (err != nil && err.Error() == "404 Not Found") || !status.IsValid {
 		log.Println(err)
 		render.Render(w, r, ErrNotFound)
@@ -40,8 +52,9 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ServerError(err))
 		return
 	}
+	// Check if we have the character in our db
 	// Retrieve a summary which allows us to populate most of the generic fields
-	summary, b, err := c.WoWCharacterProfileSummary(r.Context(), realm, name)
+	summary, b, err := bClient.WoWCharacterProfileSummary(r.Context(), realm, name)
 	if err != nil {
 		log.Println(err)
 		render.Render(w, r, ServerError(err))
@@ -55,7 +68,7 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve character media
-	media, _, err := c.WoWCharacterMediaSummary(r.Context(), realm, name)
+	media, _, err := bClient.WoWCharacterMediaSummary(r.Context(), realm, name)
 	if err != nil {
 		log.Println(err)
 		render.Render(w, r, ServerError(err))
@@ -74,8 +87,9 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 
 	character := &models.Character{
 		ID:          summary.ID,
-		Name:        summary.Name,
-		Realm:       summary.Realm.Name,
+		Name:        strings.ToLower(summary.Name),
+		Realm:       strings.ToLower(summary.Realm.Name),
+		Region:      strings.ToLower(chi.URLParam(r, "region")),
 		Faction:     summary.Faction.Name,
 		Class:       summary.CharacterClass.Name,
 		Race:        summary.Race.Name,
@@ -91,7 +105,7 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 			Main:   main,
 		},
 	}
-	stats, _, err := c.WoWCharacterAchievementsStatistics(context.Background(), realm, name)
+	stats, _, err := bClient.WoWCharacterAchievementsStatistics(context.Background(), realm, name)
 	if err != nil {
 		log.Println(err)
 		render.Render(w, r, ServerError(err))
@@ -114,20 +128,20 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	twos, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket2v2)
+	twos, _, err := bClient.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket2v2)
 	if err != nil && err.Error() == "404 Not Found" {
 		character.PvPStatistics.TwoVTwo.CurrentRating = 0
 	} else if err != nil {
 		log.Println(err)
 		render.Render(w, r, ServerError(err))
+		return
 	} else {
 		character.PvPStatistics.TwoVTwo.CurrentRating = float64(twos.Rating)
 	}
 
-	threes, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket3v3)
+	threes, _, err := bClient.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.Bracket3v3)
 	if err != nil && err.Error() == "404 Not Found" {
 		character.PvPStatistics.ThreeVThree.CurrentRating = 0
-
 	} else if err != nil {
 		log.Println(err)
 		render.Render(w, r, ServerError(err))
@@ -136,14 +150,19 @@ func GetCharacter(w http.ResponseWriter, r *http.Request) {
 		character.PvPStatistics.ThreeVThree.CurrentRating = float64(threes.Rating)
 	}
 
-	rbg, _, err := c.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.BracketRBG)
+	rbg, _, err := bClient.WoWCharacterPvPBracketStatistics(r.Context(), realm, name, wowp.BracketRBG)
 	if err != nil && err.Error() == "404 Not Found" {
 		character.PvPStatistics.RBG.CurrentRating = 0
 	} else if err != nil {
+		log.Println(err)
 		render.Render(w, r, ServerError(err))
 		return
 	} else {
 		character.PvPStatistics.RBG.CurrentRating = float64(rbg.Rating)
+	}
+
+	if err := s.db.AddCharacter(character); err != nil {
+		log.Println(err)
 	}
 
 	if err := render.Render(w, r, NewCharacterResponse(character)); err != nil {

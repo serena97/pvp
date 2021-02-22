@@ -2,7 +2,10 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"pvp/db"
+	"pvp/models"
 	"time"
 
 	"github.com/FuzzyStatic/blizzard/v2"
@@ -10,21 +13,29 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type clients struct {
-	eu *blizzard.Client
-	us *blizzard.Client
+type contextKey string
+
+type server struct {
+	r  http.Handler
+	db db.Database
+	c  map[string]*blizzard.Client
 }
 
-func NewClients(eu, us *blizzard.Client) *clients {
-	return &clients{
-		eu: eu,
-		us: us,
+func NewServer(db db.Database, c map[string]*blizzard.Client) *server {
+	return &server{
+		db: db,
+		c:  c,
 	}
 }
 
-func NewHandler(c *clients) http.Handler {
+func (s server) Serve() http.Handler {
+	return s.r
+}
+
+func (s *server) NewHandler() {
 	r := chi.NewRouter()
 
 	r.Use(cors.Handler(cors.Options{
@@ -41,40 +52,55 @@ func NewHandler(c *clients) http.Handler {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/{region}/{realm}/{name}", func(r chi.Router) {
-			r.Use(AllowedRegion)
-			r.Use(ClientCtx(c))
-			r.Get("/", GetCharacter)
+			r.Use(s.AllowedRegion)
+			r.Use(s.ClientCtx())
+			r.Use(s.CharacterCtx)
+			r.Get("/", s.GetCharacter)
 		})
 	})
-
-	return r
+	s.r = r
 }
 
 // AllowedRegion ensures the region being requested is supported
-func AllowedRegion(next http.Handler) http.Handler {
+func (s *server) AllowedRegion(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch chi.URLParam(r, "region") {
 		case blizzard.EU.String(), blizzard.US.String():
 			next.ServeHTTP(w, r)
 		default:
-			render.Render(w, r, ErrNotFound)
+			render.Render(w, r, ServerError(fmt.Errorf("requested region not supported")))
 			return
 		}
 	})
 }
 
-func ClientCtx(c *clients) func(next http.Handler) http.Handler {
+func (s *server) ClientCtx() func(next http.Handler) http.Handler {
 	var client *blizzard.Client
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch chi.URLParam(r, "region") {
 			case blizzard.EU.String():
-				client = c.eu
+				client = s.c[blizzard.EU.String()]
 			case blizzard.US.String():
-				client = c.us
+				client = s.c[blizzard.US.String()]
 			}
-			ctx := context.WithValue(r.Context(), "client", client)
+			ctx := context.WithValue(r.Context(), contextKey("client"), client)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func (s *server) CharacterCtx(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		name, region, realm := chi.URLParam(r, "name"), chi.URLParam(r, "realm"), chi.URLParam(r, "region")
+
+		var c *models.Character
+		c, err := s.db.GetCharacterByNameRealmRegion(name, region, realm)
+		if err != nil && err != mongo.ErrNoDocuments {
+			render.Render(w, r, ServerError(err))
+			return
+		}
+		ctx := context.WithValue(r.Context(), contextKey("character"), c)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
