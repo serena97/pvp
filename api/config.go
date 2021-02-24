@@ -2,7 +2,7 @@ package main
 
 type config struct {
 	// API
-	Host string `env:"HOST"`
+	Host string `env:"HOST,required"`
 	Port string `env:"PORT,required"`
 
 	// Blizzard API
