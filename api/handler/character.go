@@ -14,11 +14,11 @@ import (
 	"github.com/go-chi/render"
 )
 
-type CharacterResponse struct {
+type characterResponse struct {
 	*models.Character
 }
 
-func (cr *CharacterResponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (cr *characterResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	// Upper case fields before rendering the response
 	if cr.Character != nil {
 		cr.Character.Name = strings.Title(cr.Character.Name)
@@ -27,14 +27,14 @@ func (cr *CharacterResponse) Render(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
-func NewCharacterResponse(character *models.Character) *CharacterResponse {
-	return &CharacterResponse{Character: character}
+func newCharacterResponse(character *models.Character) *characterResponse {
+	return &characterResponse{Character: character}
 }
 
 func (s *server) GetCharacter(w http.ResponseWriter, r *http.Request) {
 	c := r.Context().Value(contextKey("character")).(*models.Character)
 	if c != nil {
-		render.Render(w, r, NewCharacterResponse(c))
+		render.Render(w, r, newCharacterResponse(c))
 		return
 	}
 
@@ -60,7 +60,7 @@ func (s *server) GetCharacter(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ServerError(err))
 		return
 	}
-	cov := &models.Covenent{}
+	cov := &models.Covenant{}
 	if err := json.Unmarshal(b, cov); err != nil {
 		log.Println(err)
 		render.Render(w, r, ServerError(err))
@@ -166,7 +166,7 @@ func (s *server) GetCharacter(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	if err := render.Render(w, r, NewCharacterResponse(character)); err != nil {
+	if err := render.Render(w, r, newCharacterResponse(character)); err != nil {
 		log.Println(err)
 		render.Render(w, r, ServerError(err))
 	}

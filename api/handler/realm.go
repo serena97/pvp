@@ -10,16 +10,16 @@ import (
 	"github.com/go-chi/render"
 )
 
-type RealmResponse struct {
+type realmResponse struct {
 	Realms []models.Realm `json:"realms"`
 }
 
-func (rr *RealmResponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (rr *realmResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func NewRealmResponse(realms []models.Realm) *RealmResponse {
-	return &RealmResponse{Realms: realms}
+func newRealmResponse(realms []models.Realm) *realmResponse {
+	return &realmResponse{Realms: realms}
 }
 
 func (s *server) GetRealms(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +39,7 @@ func (s *server) GetRealms(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := render.Render(w, r, NewRealmResponse(realms)); err != nil {
+	if err := render.Render(w, r, newRealmResponse(realms)); err != nil {
 		render.Render(w, r, ServerError(err))
 	}
 }

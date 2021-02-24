@@ -1,7 +1,9 @@
 package models
 
 const (
+	// Highest2v2PersonalRating is the id used by the blizzard API to represent a players highest rating in 2v2
 	Highest2v2PersonalRating int = 370
+	//Highest3v3PersonalRating is the id used by the blizzard API to represent a players highest rating in 3v3
 	Highest3v3PersonalRating int = 595
 )
 
@@ -34,7 +36,7 @@ type Media struct {
 
 // Covenant ToDo: Currently the blizzard api client we are using is not up to date with
 // the latest shadowlands payloads so we need to unmarshal covenant data ourselves
-type Covenent struct {
+type Covenant struct {
 	CovenantProgress struct {
 		ChosenCovenant struct {
 			Name string `json:"name"`
@@ -43,12 +45,14 @@ type Covenent struct {
 	} `json:"covenant_progress"`
 }
 
+// PvPStatistics contains a characters PvP statistics
 type PvPStatistics struct {
 	TwoVTwo     Rating `json:"2v2"`
 	ThreeVThree Rating `json:"3v3"`
 	RBG         Rating `json:"rbg"`
 }
 
+// Rating contains the rating statistics for a specific bracket
 type Rating struct {
 	HighestRating       float64 `json:"highest_rating"`
 	CurrentRating       float64 `json:"current_rating"`

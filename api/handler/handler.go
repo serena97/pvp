@@ -25,6 +25,7 @@ type server struct {
 	c  map[string]*blizzard.Client
 }
 
+// NewServer returns a server with its dependencies
 func NewServer(db db.Database, c map[string]*blizzard.Client) *server {
 	return &server{
 		db: db,
