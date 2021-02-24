@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   api:
+    tty: true
     env_file:
     - api/.env 
     build: api
@@ -9,6 +10,7 @@ services:
     depends_on:
     - db
   db:
+    tty: true
     image: mongo
     volumes:
     - "dbdata:/data/db"
