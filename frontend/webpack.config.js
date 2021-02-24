@@ -16,6 +16,9 @@ module.exports = {
     resolve: {
       extensions: ['.tsx', '.ts', '.js'],
     },
+    experiments: {
+      topLevelAwait: true
+    },
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, 'dist'),

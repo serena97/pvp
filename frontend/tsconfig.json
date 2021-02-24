@@ -1,7 +1,7 @@
 {
     "include": ["src/user.ts", "src/main.ts"],
     "compilerOptions": {
-      "module": "es2017",
+      "module": "es2015",
       "target": "es2017",
       "sourceMap": true,
       "preserveConstEnums": true,

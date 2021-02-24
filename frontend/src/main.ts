@@ -19,6 +19,8 @@ function autocomplete(input: HTMLInputElement, arr: string[]) {
         list.setAttribute("class", "autocomplete-items");
         this.parentNode.appendChild(list);
 
+        // if eli send me nothing, then UI display typed - realm
+        // limit to 10 
         for(let i = 0; i < arr.length; i++) {
             if(arr[i].substr(0, typedValue.length).toUpperCase() === typedValue.toUpperCase()) {
                 const item = document.createElement("div");
@@ -41,5 +43,34 @@ function autocomplete(input: HTMLInputElement, arr: string[]) {
     })
 }
 
-const profiles = ["Sudon", "Devzx", "Punchcanada", "Spookerino"];
-autocomplete(document.getElementById("input") as HTMLInputElement, profiles);
+interface Realm {
+    name: string
+    slug: string
+    region: string
+}
+
+interface Realms {
+    realms: Array<Realm>
+}
+
+async function getRealms(): Promise<string[]> {
+    const response = await fetch(`https://a4cd39176248.ngrok.io/api/v1/realms`);
+    if(!response.ok) {
+        console.error('error');
+    }
+
+    const realms: Realms = await response.json();
+    
+    return realms.realms.map(realm => {
+        return realm.name
+    })
+}
+
+(async () => {
+    try {
+        var profiles = await getRealms();
+        autocomplete(document.getElementById("input") as HTMLInputElement, profiles);
+    } catch (e) {
+        // Deal with the fact the chain failed
+    }
+})();
