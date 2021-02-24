@@ -8,6 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+type collection string
+
 type Database struct {
 	*mongo.Client
 	dbName string
