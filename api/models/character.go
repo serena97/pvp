@@ -10,6 +10,7 @@ type Character struct {
 	ID            int           `json:"id" bson:"_id"`
 	Name          string        `json:"name"`
 	Realm         string        `json:"realm"`
+	Realmslug     string        `json:"realm_slug"`
 	Region        string        `json:"region"`
 	Faction       string        `json:"faction"`
 	Class         string        `json:"class"`

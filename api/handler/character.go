@@ -89,6 +89,7 @@ func (s *server) GetCharacter(w http.ResponseWriter, r *http.Request) {
 		ID:          summary.ID,
 		Name:        strings.ToLower(summary.Name),
 		Realm:       strings.ToLower(summary.Realm.Name),
+		Realmslug:   summary.Realm.Slug,
 		Region:      strings.ToLower(chi.URLParam(r, "region")),
 		Faction:     summary.Faction.Name,
 		Class:       summary.CharacterClass.Name,
@@ -161,7 +162,7 @@ func (s *server) GetCharacter(w http.ResponseWriter, r *http.Request) {
 		character.PvPStatistics.RBG.CurrentRating = float64(rbg.Rating)
 	}
 
-	if err := s.db.AddCharacter(character); err != nil {
+	if err := s.db.InsertCharacter(r.Context(), character); err != nil {
 		log.Println(err)
 	}
 
