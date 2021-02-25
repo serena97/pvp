@@ -31,6 +31,15 @@ func newCharacterResponse(character *models.Character) *characterResponse {
 	return &characterResponse{Character: character}
 }
 
+func newCharacterListResponse(characters []*models.Character) []render.Renderer {
+	list := make([]render.Renderer, len(characters))
+	for i, c := range characters {
+		list[i] = newCharacterResponse(c)
+	}
+
+	return list
+}
+
 func (s *server) GetCharacter(w http.ResponseWriter, r *http.Request) {
 	c := r.Context().Value(contextKey("character")).(*models.Character)
 	if c != nil {
@@ -168,6 +177,20 @@ func (s *server) GetCharacter(w http.ResponseWriter, r *http.Request) {
 
 	if err := render.Render(w, r, newCharacterResponse(character)); err != nil {
 		log.Println(err)
+		render.Render(w, r, ServerError(err))
+	}
+}
+
+func (s *server) Search(w http.ResponseWriter, r *http.Request) {
+	q := r.Context().Value(contextKey("query")).(string)
+	characters, err := s.db.SearchCharactersByName(r.Context(), q, 10)
+	if err != nil {
+		log.Println(err)
+		render.Render(w, r, ServerError(err))
+		return
+	}
+
+	if err := render.RenderList(w, r, newCharacterListResponse(characters)); err != nil {
 		render.Render(w, r, ServerError(err))
 	}
 }
