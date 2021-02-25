@@ -38,7 +38,7 @@ func (db Database) GetCharacterByNameRealmSlugRegion(ctx context.Context, name, 
 // SearchCharactersByName searches with regex for any characters that matches the name prefix
 func (db Database) SearchCharactersByName(ctx context.Context, name string, resultsLimit int64) ([]*models.Character, error) {
 	collection := db.Database(db.dbName).Collection(string(characterCollection))
-	filter := bson.D{{"name", primitive.Regex{Pattern: name, Options: ""}}}
+	filter := bson.D{{"name", primitive.Regex{Pattern: "^" + name, Options: "i"}}}
 	options := options.Find().SetLimit(resultsLimit)
 	cur, err := collection.Find(ctx, filter, options)
 	if err != nil {
