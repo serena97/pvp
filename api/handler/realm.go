@@ -11,15 +11,24 @@ import (
 )
 
 type realmResponse struct {
-	Realms []models.Realm `json:"realms"`
+	*models.Realm
 }
 
 func (rr *realmResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func newRealmResponse(realms []models.Realm) *realmResponse {
-	return &realmResponse{Realms: realms}
+func newRealmResponse(realm *models.Realm) *realmResponse {
+	return &realmResponse{Realm: realm}
+}
+
+func newRealmListResponse(realms []*models.Realm) []render.Renderer {
+	list := make([]render.Renderer, len(realms))
+	for i, r := range realms {
+		list[i] = newRealmResponse(r)
+	}
+
+	return list
 }
 
 func (s *server) GetRealms(w http.ResponseWriter, r *http.Request) {
@@ -39,17 +48,17 @@ func (s *server) GetRealms(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := render.Render(w, r, newRealmResponse(realms)); err != nil {
+	if err := render.RenderList(w, r, newRealmListResponse(realms)); err != nil {
 		render.Render(w, r, ServerError(err))
 	}
 }
 
-func (s *server) insertRealms(r *http.Request) ([]models.Realm, error) {
-	var realms []models.Realm
+func (s *server) insertRealms(r *http.Request) ([]*models.Realm, error) {
+	var realms []*models.Realm
 
 	populateRealmsSlice := func(realmIndex *wowgd.RealmIndex, region string) {
 		for _, r := range realmIndex.Realms {
-			realm := models.Realm{
+			realm := &models.Realm{
 				Name:   r.Name,
 				Slug:   r.Slug,
 				Region: region,
@@ -69,5 +78,4 @@ func (s *server) insertRealms(r *http.Request) ([]models.Realm, error) {
 	populateRealmsSlice(realmIndexUS, "us")
 
 	return realms, s.db.InsertRealms(realms)
-
 }

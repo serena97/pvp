@@ -9,9 +9,9 @@ import (
 
 const realmCollection collection = "realms"
 
-func (db Database) GetRealms(ctx context.Context) ([]models.Realm, error) {
+func (db Database) GetRealms(ctx context.Context) ([]*models.Realm, error) {
 	collection := db.Database(db.dbName).Collection(string(realmCollection))
-	var realms []models.Realm
+	var realms []*models.Realm
 	cur, err := collection.Find(ctx, bson.D{})
 	if err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func (db Database) GetRealms(ctx context.Context) ([]models.Realm, error) {
 	return realms, nil
 }
 
-func (db Database) InsertRealms(realms []models.Realm) error {
+func (db Database) InsertRealms(realms []*models.Realm) error {
 	collection := db.Database(db.dbName).Collection(string(realmCollection))
 	docs := make([]interface{}, len(realms))
 	for i, realm := range realms {
