@@ -16,9 +16,10 @@ func (db Database) GetRealms(ctx context.Context) ([]models.Realm, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer cur.Close(context.Background())
-	var r models.Realm
+	defer cur.Close(ctx)
+
 	for cur.Next(ctx) {
+		var r models.Realm
 		if err := cur.Decode(&r); err != nil {
 			return nil, err
 		}
