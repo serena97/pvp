@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"pvp/db"
 	"pvp/models"
-	"strings"
 	"time"
 
 	"github.com/FuzzyStatic/blizzard/v2"
@@ -58,9 +57,13 @@ func (s *server) NewHandler() {
 		})
 		r.Route("/character/{region}/{realm}/{name}", func(r chi.Router) {
 			r.Use(s.AllowedRegion)
-			r.Use(s.ClientCtx())
+			r.Use(s.ClientCtx)
 			r.Use(s.CharacterCtx)
 			r.Get("/", s.GetCharacter)
+		})
+		r.Route("/character", func(r chi.Router) {
+			r.Use(s.QueryCtx)
+			r.Get("/search", s.Search)
 		})
 	})
 
@@ -80,32 +83,23 @@ func (s *server) AllowedRegion(next http.Handler) http.Handler {
 	})
 }
 
-func (s *server) ClientCtx() func(next http.Handler) http.Handler {
+func (s *server) ClientCtx(next http.Handler) http.Handler {
 	var client *blizzard.Client
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			switch chi.URLParam(r, "region") {
-			case blizzard.EU.String():
-				client = s.c[blizzard.EU.String()]
-			case blizzard.US.String():
-				client = s.c[blizzard.US.String()]
-			}
-			ctx := context.WithValue(r.Context(), contextKey("client"), client)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch chi.URLParam(r, "region") {
+		case blizzard.EU.String():
+			client = s.c[blizzard.EU.String()]
+		case blizzard.US.String():
+			client = s.c[blizzard.US.String()]
+		}
+		ctx := context.WithValue(r.Context(), contextKey("client"), client)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func (s *server) CharacterCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name, region, realm := chi.URLParam(r, "name"), chi.URLParam(r, "realm"), chi.URLParam(r, "region")
-		fmt.Println(name, realm, region)
-		normalizeRealm := func(r string) string {
-			rSplit := strings.Split(strings.ToLower(r), " ")
-			return strings.Join(rSplit, "-")
-		}
-		realm = normalizeRealm(realm)
-		fmt.Println(realm)
 		var c *models.Character
 		c, err := s.db.GetCharacterByNameRealmSlugRegion(r.Context(), name, region, realm)
 		if err != nil && err != mongo.ErrNoDocuments {
@@ -113,6 +107,18 @@ func (s *server) CharacterCtx(next http.Handler) http.Handler {
 			return
 		}
 		ctx := context.WithValue(r.Context(), contextKey("character"), c)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (s *server) QueryCtx(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query().Get("q")
+		if q == "" {
+			render.Render(w, r, ServerError(fmt.Errorf("query can't be empty")))
+			return
+		}
+		ctx := context.WithValue(r.Context(), contextKey("query"), q)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
