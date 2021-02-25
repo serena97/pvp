@@ -47,12 +47,8 @@ func (db Database) SearchCharactersByName(ctx context.Context, name string, resu
 	defer cur.Close(ctx)
 
 	var characters []*models.Character
-	for cur.Next(ctx) {
-		var c *models.Character
-		if err := cur.Decode(&c); err != nil {
-			return nil, err
-		}
-		characters = append(characters, c)
+	if err := cur.All(ctx, &characters); err != nil {
+		return nil, err
 	}
 
 	return characters, nil

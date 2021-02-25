@@ -18,12 +18,8 @@ func (db Database) GetRealms(ctx context.Context) ([]models.Realm, error) {
 	}
 	defer cur.Close(ctx)
 
-	for cur.Next(ctx) {
-		var r models.Realm
-		if err := cur.Decode(&r); err != nil {
-			return nil, err
-		}
-		realms = append(realms, r)
+	if err := cur.All(ctx, &realms); err != nil {
+		return nil, err
 	}
 
 	return realms, nil
