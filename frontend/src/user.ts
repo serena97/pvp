@@ -52,9 +52,7 @@ const classColors = new Map([
     ['Warrior', '#C69B6D'],
 ])
 
-export async function getUser(profileName: string) { 
-    const region = 'eu'
-    const realmSlug = 'silvermoon'
+export async function getUser(profileName: string, realmSlug: string, region: string) { 
     const response = await fetch(`http://localhost:8080/api/v1/character/${region}/${realmSlug}/${profileName}`);
 
     if(!response.ok) {
