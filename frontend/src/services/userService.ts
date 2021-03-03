@@ -1,41 +1,5 @@
-interface User {
-    id: number;
-    renown_level: number;
-    item_level: string;
-    level: number;
-    name: string;
-    realm: string;
-    faction: string;
-    class: string;
-    covenant: string;
-    gender: string;
-    race: string;
-    spec: string;
-    guild: string;
-    media: {
-        avatar: string;
-        main: string;
-    }
-    pvp_statistcs: PVPStatics
-}
-
-interface PVPStatics {
-    "2v2": {
-        highest_rating: number;
-        current_rating: number;
-        season_highest_rating: number;
-    }
-    "3v3": {
-        highest_rating: number;
-        current_rating: number;
-        season_highest_rating: number;
-    }
-    "rbg": {
-        highest_rating: number;
-        current_rating: number;
-        season_highest_rating: number;
-    }
-}
+import { PVPStatics } from "../models/statistics";
+import { User } from "../models/user";
 
 const classColors = new Map([
     ['Death Knight', '#C41E3A'],
@@ -52,47 +16,60 @@ const classColors = new Map([
     ['Warrior', '#C69B6D'],
 ])
 
-export async function getUser(profileName: string, realmSlug: string, region: string) { 
+export default async function getUser(profileName: string, realmSlug: string, region: string) { 
     const response = await fetch(`http://localhost:8080/api/v1/character/${region}/${realmSlug}/${profileName}`);
 
     if(!response.ok) {
-        console.error('error');
+        console.error('Profile not found');
     }
 
     const user: User = await response.json();
-    const color = classColors.get(user.class) ?? '#FFFFFF';
     
-    const background = document.getElementsByClassName('background')[0] as HTMLElement;
-    background.style['background-image'] = `url(${user.media.main})`
+    setBackground(user.media.main);
+    setProfileName(user.name, user.class, user.faction);
+    setAvatar(user.media.avatar);
+    setItemLevel(user.item_level);
+    setProfileTitle(user);
 
+    setPvpStatistics(user.pvp_statistcs);
+
+    setCardVisibility()
+}
+
+function setBackground(url: string) {
+    const background = document.getElementsByClassName('background')[0] as HTMLElement;
+    background.style['background-image'] = `url(${url})`
+}
+
+function setProfileName(username: string, userClass: string, faction: string) {
     const name = document.getElementById('name');
     removeChildren(name);
 
-    name.textContent = user.name;
-    name.style.color = color;
-    const logo = document.createElement('img');
-    logo.src = user.faction === 'Alliance' ? 'assets/Logo-alliance.png' : 'assets/Logo-horde.png';
-    name.appendChild(logo)
+    name.textContent = username;
+    name.style.color = classColors.get(userClass) ?? '#FFFFFF';
 
+    const logo = document.createElement('img');
+    logo.src = faction === 'Alliance' ? 'assets/Logo-alliance.png' : 'assets/Logo-horde.png';
+    name.appendChild(logo)
+}
+
+function setAvatar(avatarUrl: string) {
     const avatar = document.getElementById('avatar');
     removeChildren(avatar);
     const img = document.createElement('img');
-    img.src = user.media.avatar;
+    img.src = avatarUrl;
     avatar.appendChild(img);
+}
 
+function setItemLevel(level: number) {
     const itemLvl = document.getElementById('item-lvl');
-    itemLvl.textContent = `${user.item_level} ILVL`
+    itemLvl.textContent = `${level} ILVL`
+}
 
+function setProfileTitle(user: User) {
     const characterTitle = document.getElementById('character-title');
     const guild = user.guild ? `<${user.guild}>` : ''
     characterTitle.textContent = `${user.level} ${user.race} ${user.spec} ${user.class} ${guild} ${user.realm}`
-
-    getPvpStatistics(user.pvp_statistcs);
-
-    const cards = document.getElementsByClassName('card');
-    for(const card of cards) {
-        (card as HTMLElement).style.visibility = 'visible' 
-    }
 }
 
 function removeChildren(node: HTMLElement) {
@@ -101,7 +78,7 @@ function removeChildren(node: HTMLElement) {
     }
 }
 
-function getPvpStatistics(pvpstats: PVPStatics) {
+function setPvpStatistics(pvpstats: PVPStatics) {
     const table = document.querySelector("table");
     removeChildren(table);
     const thead = table.createTHead();
@@ -128,3 +105,12 @@ function insertCell(row: HTMLTableRowElement, stat: any) {
     const text = document.createTextNode(stat);
     cell.appendChild(text)
 }
+
+function setCardVisibility(): void {
+    const cards = document.getElementsByClassName('card');
+    for(const card of cards) {
+        (card as HTMLElement).style.visibility = 'visible' 
+    }
+}
+
+

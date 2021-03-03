@@ -1,5 +1,4 @@
 {
-    "include": ["src/user.ts", "src/main.ts"],
     "compilerOptions": {
       "module": "es2015",
       "target": "es2017",
