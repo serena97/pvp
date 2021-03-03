@@ -24,22 +24,23 @@ function addItem(list, item, profile, realm, region) {
 function displayDefaultRealms(typedValue, list) {
     typedValue = typedValue.charAt(0).toUpperCase() + typedValue.slice(1);
     const matchedRealm = typedValue.split('-')[1];
+    const typedProfile = typedValue.split('-')[0];
     if(matchedRealm?.length) {
         const matchingRealms = RealmService.getMatchingRealms(matchedRealm);
         matchingRealms.forEach(realm => {
             const matchingRealm = matchedRealm.charAt(0).toUpperCase() + matchedRealm.slice(1);
-            const profile = typedValue.split('-')[0] + '-';
+            const profile = typedProfile + ' - ';
             const item = document.createElement("div");
             item.innerHTML = "<strong>" + profile + matchingRealm + "</strong>";
             item.innerHTML += realm.name.substr(matchingRealm.length);
-            addItem(list, item, typedValue.split('-')[0], realm.slug, realm.region);
+            addItem(list, item, typedProfile, realm.slug, realm.region);
         })
     } else {
         RealmService.getDefaultRealms().forEach(realm => {
             const item = document.createElement("div");
-            item.innerHTML = "<strong>" + typedValue + "</strong>";
+            item.innerHTML = "<strong>" + typedProfile + "</strong>";
             item.innerHTML += typedValue.includes('-') ?  realm.name : ' - ' + realm.name;
-            addItem(list, item, typedValue, realm.slug, realm.region);
+            addItem(list, item, typedProfile, realm.slug, realm.region);
         })
     }
 }
@@ -48,7 +49,7 @@ export default async function autocomplete(input: HTMLInputElement) {
     input.addEventListener("input", async function(e) {
         closeAllLists();
 
-        const typedValue = this.value;
+        const typedValue = this.value.replace(/ /g,'');
         if(!typedValue) return false;
 
         const list = document.createElement('div');

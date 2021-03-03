@@ -34,7 +34,8 @@
   border-radius: 10px;
   overflow: hidden;
   width: 500px;
-  padding-left: 20px; }
+  padding-left: 20px;
+  position: absolute; }
   .searchbar .autocomplete-items div {
     padding: 10px;
     cursor: pointer;

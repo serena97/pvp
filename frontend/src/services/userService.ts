@@ -18,22 +18,39 @@ const classColors = new Map([
 
 export default async function getUser(profileName: string, realmSlug: string, region: string) { 
     const response = await fetch(`http://localhost:8080/api/v1/character/${region}/${realmSlug}/${profileName}`);
+    
+    const avatar = document.getElementById('avatar');
+    const name = document.getElementById('name');
+    const itemLvl = document.getElementById('item-lvl');
+    const profileTitle = document.getElementById('character-title');
+
+    [avatar, name, itemLvl, profileTitle].forEach(node => removeChildren(node));
 
     if(!response.ok) {
         console.error('Profile not found');
+        displayUserNotFound(name, profileName);
+        return;
     }
 
     const user: User = await response.json();
     
     setBackground(user.media.main);
-    setProfileName(user.name, user.class, user.faction);
-    setAvatar(user.media.avatar);
-    setItemLevel(user.item_level);
-    setProfileTitle(user);
+    setProfileName(name, user.name, user.class, user.faction);
+    setAvatar(avatar, user.media.avatar);
+    setItemLevel(itemLvl, user.item_level);
+    setProfileTitle(profileTitle, user);
 
     setPvpStatistics(user.pvp_statistcs);
 
     setCardVisibility()
+}
+
+function displayUserNotFound(message: HTMLElement, profileName: string) {
+    message.textContent = `${profileName} Not Found`;
+    message.style.color = "white";
+    const cards = document.getElementsByClassName('card') as HTMLCollectionOf<HTMLElement>;
+    cards[0].style.visibility = 'visible' 
+    cards[1].style.visibility = 'hidden' 
 }
 
 function setBackground(url: string) {
@@ -41,10 +58,7 @@ function setBackground(url: string) {
     background.style['background-image'] = `url(${url})`
 }
 
-function setProfileName(username: string, userClass: string, faction: string) {
-    const name = document.getElementById('name');
-    removeChildren(name);
-
+function setProfileName(name: HTMLElement, username: string, userClass: string, faction: string) {
     name.textContent = username;
     name.style.color = classColors.get(userClass) ?? '#FFFFFF';
 
@@ -53,23 +67,19 @@ function setProfileName(username: string, userClass: string, faction: string) {
     name.appendChild(logo)
 }
 
-function setAvatar(avatarUrl: string) {
-    const avatar = document.getElementById('avatar');
-    removeChildren(avatar);
+function setAvatar(avatar: HTMLElement, avatarUrl: string) {
     const img = document.createElement('img');
     img.src = avatarUrl;
     avatar.appendChild(img);
 }
 
-function setItemLevel(level: number) {
-    const itemLvl = document.getElementById('item-lvl');
+function setItemLevel(itemLvl: HTMLElement, level: number) {
     itemLvl.textContent = `${level} ILVL`
 }
 
-function setProfileTitle(user: User) {
-    const characterTitle = document.getElementById('character-title');
+function setProfileTitle(profileTitle: HTMLElement, user: User) {
     const guild = user.guild ? `<${user.guild}>` : ''
-    characterTitle.textContent = `${user.level} ${user.race} ${user.spec} ${user.class} ${guild} ${user.realm}`
+    profileTitle.textContent = `${user.level} ${user.race} ${user.spec} ${user.class} ${guild} ${user.realm}`
 }
 
 function removeChildren(node: HTMLElement) {
