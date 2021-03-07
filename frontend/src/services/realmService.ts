@@ -1,7 +1,7 @@
 import { Realm } from "../models/realm";
 
 class RealmService {
-    realms: Realm[]
+    private realms: Realm[]
     readonly limit = 10;
 
     constructor() {
@@ -35,8 +35,8 @@ class RealmService {
         return matchingRealms
     }
     
-    getDefaultRealms(): Realm[] {
-        return this.realms.slice(0, this.limit - 1);
+    getDefaultRealms(endIndex = this.limit - 1): Realm[] {
+        return this.realms.slice(0, endIndex);
     }
 }
 

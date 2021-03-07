@@ -43,6 +43,9 @@
     border-bottom: 1px solid #d4d4d4; }
     .searchbar .autocomplete-items div:hover {
       background-color: #e9e9e9; }
+    .searchbar .autocomplete-items div .region {
+      height: 30px;
+      float: right; }
 
 .card {
   visibility: hidden;

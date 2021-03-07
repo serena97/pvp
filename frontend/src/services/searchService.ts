@@ -9,6 +9,7 @@ function closeAllLists() {
 }
 
 function addItem(list, item, profile, realm, region) {
+    item.innerHTML += `<span><img class="region" src="assets/${region}.svg"></span>`
     item.dataset.profile = profile;
     item.dataset.realm = realm;
     item.dataset.region = region;
@@ -21,8 +22,16 @@ function addItem(list, item, profile, realm, region) {
     })
 }
 
-function displayDefaultRealms(typedValue, list) {
-    typedValue = typedValue.charAt(0).toUpperCase() + typedValue.slice(1);
+function displayDefaultRealms(realms, typedProfile, list) {
+    realms.forEach(realm => {
+        const item = document.createElement("div");
+        item.innerHTML = "<strong>" + typedProfile + "</strong>";
+        item.innerHTML += ' - ' + realm.name;
+        addItem(list, item, typedProfile, realm.slug, realm.region);
+    })
+}
+
+function displayRealms(typedValue, list) {
     const matchedRealm = typedValue.split('-')[1];
     const typedProfile = typedValue.split('-')[0];
     if(matchedRealm?.length) {
@@ -36,12 +45,8 @@ function displayDefaultRealms(typedValue, list) {
             addItem(list, item, typedProfile, realm.slug, realm.region);
         })
     } else {
-        RealmService.getDefaultRealms().forEach(realm => {
-            const item = document.createElement("div");
-            item.innerHTML = "<strong>" + typedProfile + "</strong>";
-            item.innerHTML += typedValue.includes('-') ?  realm.name : ' - ' + realm.name;
-            addItem(list, item, typedProfile, realm.slug, realm.region);
-        })
+        const realms = RealmService.getDefaultRealms();
+        displayDefaultRealms(realms, typedProfile, list);
     }
 }
 
@@ -49,7 +54,8 @@ export default async function autocomplete(input: HTMLInputElement) {
     input.addEventListener("input", async function(e) {
         closeAllLists();
 
-        const typedValue = this.value.replace(/ /g,'');
+        let typedValue = this.value.replace(/ /g,'');
+        typedValue = typedValue.charAt(0).toUpperCase() + typedValue.slice(1);
         if(!typedValue) return false;
 
         const list = document.createElement('div');
@@ -57,18 +63,23 @@ export default async function autocomplete(input: HTMLInputElement) {
         list.setAttribute("class", "autocomplete-items");
         this.parentNode.appendChild(list);
 
+        const typedRealm = typedValue.split('-')[1];
+        const typedProfile = typedValue.split('-')[0];
+
         if(typedValue.length > 2){
-            const response = await fetch(`http://localhost:8080/api/v1/character/search?q=${typedValue}`);
+            const response = await fetch(`http://localhost:8080/api/v1/character/search?q=${typedProfile}`);
             const characters = await response.json();
             if(characters.length) {
                 characters.forEach(character => {
+                    if(typedRealm && character.realm.toUpperCase().substring(0, typedRealm.length) !== typedRealm.toUpperCase()) {
+                        return;
+                    }
                     const item = document.createElement("div");
-                    item.innerHTML = character.name + '-' + character.realm;
+                    item.innerHTML = "<strong>" + character.name + ' - ' + character.realm + "</strong>";
                     addItem(list, item, character.name, character.realm_slug, character.region);
                 })
-            } else {
-                displayDefaultRealms(typedValue, list);
             }
+            displayRealms(typedValue, list);
         }
     })
 
