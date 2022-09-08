@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/devzx/pvp#readme",
   "dependencies": {
-    "node-sass": "^5.0.0"
+    "node-sass": "^7.0.2"
   },
   "devDependencies": {
     "concurrently": "^6.0.0",
